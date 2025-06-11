@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  clerkUserId String   @id @map("clerk_user_id")
+  email       String   @unique
+  phoneNumber String?  @unique @map("phone_number")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  habits      Habit[] // Relation to Habits
+}
+
+model Habit {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  name              String
+  miniGoal          String    @map("mini_goal")
+  plusGoal          String    @map("plus_goal")
+  eliteGoal         String    @map("elite_goal")
+  reminderTime      String?   @map("reminder_time") // Prisma doesn't have a TIME only type, will be mapped to String or DateTime if time component is crucial
+  reminderChannels  Json?     @map("reminder_channels") // Prisma maps JSONB to Json
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user              User      @relation(fields: [userId], references: [clerkUserId], onDelete: Cascade)
+  completions       Completion[] // Relation to Completions
+}
+
+enum CompletionLevel {
+  MINI
+  PLUS
+  ELITE
+}
+
+model Completion {
+  id              String          @id @default(uuid())
+  habitId         String          @map("habit_id")
+  completionDate  DateTime        @map("completion_date") // Prisma maps DATE to DateTime; you might want to use @db.Date if your DB supports it and you need date only
+  level           CompletionLevel
+  journalNote     String?         @map("journal_note")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  habit           Habit           @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, completionDate], name: "habit_completion_date_unique")
+}
